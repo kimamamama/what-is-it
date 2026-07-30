@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>これな〜んだ？ / What is it?</title>
+<style>
+  :root {
+    --bg: #fff9f0;
+    --primary: #ff6b35;
+    --secondary: #ffc13b;
+    --accent: #4ecdc4;
+    --correct: #5cb85c;
+    --wrong: #e74c3c;
+    --card: #ffffff;
+    --shadow: 0 4px 20px rgba(0,0,0,0.12);
+    --radius: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Hiragino Maru Gothic Pro', 'BIZ UDGothic', 'Rounded Mplus 1c', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-x: hidden;
+  }
+
+  /* TOP */
+  #topScreen {
+    width: 100%; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 30px; padding: 40px 20px;
+    background: linear-gradient(135deg, #fff9f0 0%, #ffe8d6 100%);
+  }
+  .top-title {
+    font-size: clamp(2rem, 8vw, 3.5rem); font-weight: 900;
+    color: var(--primary); text-align: center; line-height: 1.2;
+    text-shadow: 3px 3px 0 #ffc13b; animation: bounce 2s infinite;
+  }
+  .top-emoji { font-size: clamp(4rem, 15vw, 7rem); animation: wiggle 2s ease-in-out infinite; }
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes wiggle { 0%,100%{transform:rotate(-8deg)} 50%{transform:rotate(8deg)} }
+  .lang-btns { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .lang-btn {
+    padding: 18px 40px; font-size: clamp(1.2rem, 4vw, 1.6rem); font-weight: 800;
+    border: none; border-radius: 50px; cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.15); transition: transform .15s, box-shadow .15s;
+  }
+  .lang-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.15); }
+  .lang-btn-ja { background: var(--primary); color: #fff; }
+  .lang-btn-en { background: var(--accent); color: #fff; }
+
+  /* GAME */
+  #gameScreen {
+    display: none; width: 100%; min-height: 100vh;
+    flex-direction: column; align-items: center;
+    padding: 10px 12px 20px; gap: 10px;
+  }
+  .header {
+    width: 100%; max-width: 500px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .score-badge {
+    background: var(--secondary); color: #333; font-weight: 800;
+    font-size: clamp(0.9rem, 3vw, 1.1rem); padding: 6px 14px;
+    border-radius: 30px; box-shadow: var(--shadow);
+  }
+  .q-counter { font-size: clamp(0.75rem,2.5vw,0.9rem); color: #aaa; font-weight: 700; }
+  .quit-btn {
+    background: #eee; border: none; border-radius: 20px; padding: 6px 14px;
+    font-size: clamp(0.8rem, 2.5vw, 1rem); cursor: pointer; font-weight: 700; color: #666;
+  }
+
+  .question-card {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 16px; width: 100%; max-width: 500px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .question-label { font-size: clamp(0.9rem, 3vw, 1.1rem); font-weight: 800; color: var(--primary); letter-spacing: 2px; }
+  .emoji-display { font-size: clamp(5rem, 20vw, 9rem); line-height: 1; user-select: none; }
+
+  .sound-btn {
+    background: var(--secondary); border: none; border-radius: 50px;
+    padding: 8px 20px; font-size: clamp(0.95rem, 3vw, 1.1rem); font-weight: 800;
+    cursor: pointer; color: #333; box-shadow: 0 4px 0 #c49a00;
+    transition: transform .1s, box-shadow .1s; display: flex; align-items: center; gap: 6px;
+  }
+  .sound-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #c49a00; }
+  .sound-btn.playing { animation: soundpulse .25s ease; }
+  @keyframes soundpulse { 0%{transform:scale(1)} 50%{transform:scale(1.1)} 100%{transform:scale(1)} }
+
+  .answer-boxes { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
+  .answer-box {
+    width: clamp(44px, 12vw, 58px); height: clamp(44px, 12vw, 58px);
+    border: 3px solid #ddd; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(1.3rem, 4.5vw, 1.8rem); font-weight: 900;
+    background: #f8f8f8; transition: border-color .3s, background .3s;
+  }
+  .answer-box.filled { border-color: var(--accent); background: #eafaf9; animation: pop .2s ease; }
+  .answer-box.correct-box { border-color: var(--correct); background: #e8f8e8; }
+  @keyframes pop { 0%{transform:scale(0.7)} 70%{transform:scale(1.15)} 100%{transform:scale(1)} }
+
+  /* Big maru */
+  .big-maru {
+    display: none; position: fixed; top: 50%; left: 50%;
+    font-size: clamp(7rem, 30vw, 14rem); z-index: 100; pointer-events: none;
+  }
+  @keyframes marufade {
+    0%{transform:translate(-50%,-50%) scale(0); opacity:1}
+    50%{transform:translate(-50%,-50%) scale(1.2); opacity:1}
+    100%{transform:translate(-50%,-50%) scale(1); opacity:0}
+  }
+
+  .choices-area { width: 100%; max-width: 500px; }
+  .choices-label { font-size: clamp(0.85rem, 2.8vw, 1rem); color: #888; font-weight: 700; margin-bottom: 8px; text-align: center; }
+  .choices-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .choice-btn {
+    background: var(--card); border: 3px solid #e0e0e0; border-radius: 16px;
+    padding: clamp(12px, 3vw, 18px) 10px;
+    font-size: clamp(1.3rem, 5vw, 1.9rem); font-weight: 900;
+    cursor: pointer; box-shadow: 0 4px 0 #d0d0d0;
+    transition: transform .1s, box-shadow .1s, border-color .2s, background .2s;
+    color: #333; letter-spacing: 2px;
+  }
+  .choice-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #d0d0d0; }
+  .choice-btn:disabled { cursor: default; }
+  .choice-btn.shake { animation: shake .4s ease; border-color: var(--wrong); background: #fff0f0; }
+  .choice-btn.chosen-correct { border-color: var(--correct); background: #e8f8e8; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)}
+    40%{transform:translateX(10px)} 60%{transform:translateX(-8px)} 80%{transform:translateX(8px)}
+  }
+
+  .nav-row {
+    display: flex; gap: 10px; align-items: center; justify-content: center;
+    margin-top: 8px; flex-wrap: wrap;
+  }
+  .next-btn {
+    background: var(--primary); color: #fff; border: none; border-radius: 50px;
+    padding: 14px 32px; font-size: clamp(1rem, 3.5vw, 1.3rem); font-weight: 900;
+    cursor: pointer; box-shadow: 0 5px 0 #c0401a; transition: transform .1s, box-shadow .1s;
+  }
+  .next-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #c0401a; }
+  .prev-btn {
+    background: #e0e0e0; color: #555; border: none; border-radius: 50px;
+    padding: 14px 22px; font-size: clamp(1rem, 3.5vw, 1.3rem); font-weight: 900;
+    cursor: pointer; box-shadow: 0 5px 0 #b0b0b0; transition: transform .1s, box-shadow .1s;
+  }
+  .prev-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #b0b0b0; }
+  .prev-btn:disabled { opacity: 0.3; cursor: default; }
+
+  /* SLOT */
+  #slotScreen {
+    display: none; width: 100%; min-height: 100vh;
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 20px; padding: 30px 20px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+    position: relative;
+  }
+  .stars-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .star { position:absolute; border-radius:50%; background:rgba(255,255,255,0.7); animation: twinkle 3s infinite ease-in-out; }
+  @keyframes twinkle { 0%,100%{opacity:0.3} 50%{opacity:1} }
+  .slot-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%; }
+  .slot-title {
+    font-size: clamp(1.5rem, 6vw, 2.5rem); font-weight: 900; color: var(--secondary);
+    text-align: center; animation: glow 2s ease-in-out infinite alternate;
+  }
+  @keyframes glow { from{text-shadow:0 0 10px rgba(255,193,59,0.5)} to{text-shadow:0 0 30px rgba(255,193,59,1)} }
+  .slot-subtitle { color: rgba(255,255,255,0.75); font-size: clamp(0.85rem,3vw,1rem); font-weight: 700; text-align: center; }
+  .slot-machine {
+    background: linear-gradient(145deg, #2d2d4e, #1a1a3a); border-radius: 24px;
+    padding: 24px; width: 100%; max-width: 360px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,193,59,0.3);
+  }
+  .slot-reels { display: flex; gap: 12px; margin-bottom: 20px; justify-content: center; }
+  .reel {
+    width: clamp(70px, 18vw, 100px); height: clamp(70px, 18vw, 100px);
+    background: #fff; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.2); border: 3px solid rgba(255,255,255,0.2);
+  }
+  .slot-spin-btn {
+    width: 100%; background: linear-gradient(135deg, var(--secondary), #e6a800);
+    border: none; border-radius: 50px; padding: 14px;
+    font-size: clamp(1.1rem, 3.5vw, 1.4rem); font-weight: 900;
+    cursor: pointer; color: #1a1a2e; box-shadow: 0 5px 0 rgba(0,0,0,0.3);
+    transition: transform .1s, box-shadow .1s;
+  }
+  .slot-spin-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+  .slot-spin-btn:disabled { opacity: 0.5; cursor: default; }
+  .slot-result { font-size: clamp(1.3rem, 5vw, 2rem); font-weight: 900; color: #fff; text-align: center; min-height: 2.5rem; }
+  .slot-result.win { color: var(--secondary); animation: tada .6s ease; }
+  .slot-result.lose { color: #ff9999; }
+  @keyframes tada {
+    0%{transform:scale(1)} 10%,20%{transform:scale(0.9) rotate(-3deg)}
+    30%,50%,70%,90%{transform:scale(1.1) rotate(3deg)} 40%,60%,80%{transform:scale(1.1) rotate(-3deg)}
+    100%{transform:scale(1) rotate(0)}
+  }
+  .slot-back-btn {
+    background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50px; padding: 12px 30px; font-size: clamp(0.9rem, 3vw, 1.1rem);
+    color: #fff; cursor: pointer; font-weight: 700; transition: background .2s;
+  }
+  .slot-back-btn:hover { background: rgba(255,255,255,0.25); }
+
+  /* Confetti */
+  .confetti-piece {
+    position: fixed; width: 10px; height: 10px; top: -20px;
+    border-radius: 2px; animation: fall linear forwards; z-index: 200; pointer-events: none;
+  }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div id="topScreen">
+  <div class="top-emoji">🐻</div>
+  <div class="top-title">これな〜んだ？<br><span style="font-size:0.55em;color:#4ecdc4;">What is it?</span></div>
+  <div class="lang-btns">
+    <button class="lang-btn lang-btn-ja" onclick="startGame('ja')">🇯🇵 にほんご</button>
+    <button class="lang-btn lang-btn-en" onclick="startGame('en')">🇺🇸 English</button>
+  </div>
+</div>
+
+<div class="big-maru" id="bigMaru">⭕</div>
+
+<div id="gameScreen" style="display:none;flex-direction:column;">
+  <div class="header">
+    <div class="score-badge" id="scoreBadge">⭐ 0</div>
+    <div class="q-counter" id="qCounter"></div>
+    <button class="quit-btn" onclick="quitGame()">やめる / Quit</button>
+  </div>
+  <div class="question-card">
+    <div class="question-label" id="questionLabel">これな〜んだ？</div>
+    <div class="emoji-display" id="emojiDisplay">🐱</div>
+    <button class="sound-btn" id="soundBtn" onclick="playWord()">
+      🔊 <span id="soundBtnLabel">きいてみよう</span>
+    </button>
+    <div class="answer-boxes" id="answerBoxes"></div>
+  </div>
+  <div class="choices-area">
+    <div class="choices-label" id="choicesLabel">えらんでね！</div>
+    <div class="choices-grid" id="choicesGrid"></div>
+  </div>
+  <div class="nav-row" id="navRow">
+    <button class="prev-btn" id="prevBtn" onclick="prevQuestion()">← もどる</button>
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">つぎへ →</button>
+  </div>
+</div>
+
+<div id="slotScreen" style="display:none;flex-direction:column;">
+  <div class="stars-bg" id="starsBg"></div>
+  <div class="slot-content">
+    <div class="slot-title">🎰 スロットチャレンジ！<br><span style="font-size:0.65em">Slot Challenge!</span></div>
+    <div class="slot-subtitle" id="slotSubtitle"></div>
+    <div class="slot-machine">
+      <div class="slot-reels">
+        <div class="reel" id="reel0">🍀</div>
+        <div class="reel" id="reel1">🍀</div>
+        <div class="reel" id="reel2">🍀</div>
+      </div>
+      <button class="slot-spin-btn" id="spinBtn" onclick="spinSlot()">🎰 まわす！ / SPIN!</button>
+    </div>
+    <div class="slot-result" id="slotResult"></div>
+    <button class="slot-back-btn" id="slotBackBtn" onclick="backToGame()" style="display:none;">🎮 もどる / Back</button>
+  </div>
+</div>
+
+<script>
+// =================== DATA ===================
+const DATA = {
+  ja: [
+    {emoji:'🐱',answer:'ねこ'},{emoji:'🐶',answer:'いぬ'},{emoji:'🐮',answer:'うし'},
+    {emoji:'🐴',answer:'うま'},{emoji:'⭐',answer:'ほし'},{emoji:'🌙',answer:'つき'},
+    {emoji:'🐻',answer:'くま'},{emoji:'🐼',answer:'ぱんだ'},{emoji:'🐟',answer:'さかな'},
+    {emoji:'🌸',answer:'はな'},{emoji:'☀️',answer:'たいよう'},{emoji:'🍎',answer:'りんご'},
+    {emoji:'🍌',answer:'ばなな'},{emoji:'🚗',answer:'くるま'},{emoji:'✈️',answer:'ひこうき'},
+    {emoji:'🌊',answer:'なみ'},{emoji:'⛄',answer:'ゆきだるま'},{emoji:'🌈',answer:'にじ'},
+    {emoji:'🎈',answer:'ふうせん'},{emoji:'🏠',answer:'いえ'},{emoji:'🐰',answer:'うさぎ'},
+    {emoji:'🐸',answer:'かえる'},{emoji:'🦊',answer:'きつね'},{emoji:'🐧',answer:'ぺんぎん'},
+    {emoji:'🦁',answer:'らいおん'},{emoji:'🐘',answer:'ぞう'},{emoji:'🦒',answer:'きりん'},
+    {emoji:'🐊',answer:'わに'},{emoji:'🦋',answer:'ちょうちょ'},{emoji:'🐝',answer:'はち'},
+    {emoji:'🍓',answer:'いちご'},{emoji:'🍊',answer:'みかん'},{emoji:'🍇',answer:'ぶどう'},
+    {emoji:'🍉',answer:'すいか'},{emoji:'🍑',answer:'もも'},{emoji:'🌽',answer:'とうもろこし'},
+    {emoji:'🥕',answer:'にんじん'},{emoji:'🍄',answer:'きのこ'},
+    {emoji:'🚢',answer:'ふね'},{emoji:'⚽',answer:'ボール'},
+    {emoji:'📚',answer:'ほん'},{emoji:'🎂',answer:'ケーキ'},{emoji:'🍦',answer:'アイス'},
+    {emoji:'🌍',answer:'ちきゅう'},{emoji:'🗻',answer:'やま'},{emoji:'🌲',answer:'き'},
+    {emoji:'🦀',answer:'かに'},{emoji:'🐙',answer:'たこ'},{emoji:'🦑',answer:'いか'},
+    {emoji:'🐓',answer:'にわとり'},{emoji:'🐥',answer:'ひよこ'},{emoji:'🦅',answer:'わし'},
+    {emoji:'🌻',answer:'ひまわり'},{emoji:'❄️',answer:'ゆき'},
+    {emoji:'🎵',answer:'おんがく'},{emoji:'🔔',answer:'かね'},
+    {emoji:'🌵',answer:'さぼてん'},
+    {emoji:'🐺',answer:'おおかみ'},{emoji:'🐗',answer:'いのしし'},{emoji:'🦔',answer:'ハリネズミ'},
+    {emoji:'🐢',answer:'かめ'},{emoji:'🦎',answer:'とかげ'},{emoji:'🐍',answer:'へび'},
+    {emoji:'🦈',answer:'さめ'},{emoji:'🐋',answer:'くじら'},{emoji:'🦭',answer:'あざらし'},
+    {emoji:'🌾',answer:'いね'},{emoji:'🍀',answer:'クローバー'},
+  ],
+  en: [
+    {emoji:'🐱',answer:'CAT'},{emoji:'🐶',answer:'DOG'},{emoji:'🐮',answer:'COW'},
+    {emoji:'🐴',answer:'HORSE'},{emoji:'⭐',answer:'STAR'},{emoji:'🌙',answer:'MOON'},
+    {emoji:'🐻',answer:'BEAR'},{emoji:'🐟',answer:'FISH'},{emoji:'🌸',answer:'FLOWER'},
+    {emoji:'☀️',answer:'SUN'},{emoji:'🍎',answer:'APPLE'},{emoji:'🍌',answer:'BANANA'},
+    {emoji:'🚗',answer:'CAR'},{emoji:'✈️',answer:'PLANE'},{emoji:'🌈',answer:'RAINBOW'},
+    {emoji:'🎈',answer:'BALLOON'},{emoji:'🏠',answer:'HOUSE'},{emoji:'⛄',answer:'SNOWMAN'},
+    {emoji:'🌊',answer:'WAVE'},{emoji:'🐼',answer:'PANDA'},{emoji:'🐰',answer:'RABBIT'},
+    {emoji:'🐸',answer:'FROG'},{emoji:'🦊',answer:'FOX'},{emoji:'🐧',answer:'PENGUIN'},
+    {emoji:'🦁',answer:'LION'},{emoji:'🐘',answer:'ELEPHANT'},{emoji:'🦒',answer:'GIRAFFE'},
+    {emoji:'🐊',answer:'CROC'},{emoji:'🦋',answer:'BUTTERFLY'},{emoji:'🐝',answer:'BEE'},
+    {emoji:'🍓',answer:'STRAWBERRY'},{emoji:'🍊',answer:'ORANGE'},{emoji:'🍇',answer:'GRAPE'},
+    {emoji:'🍉',answer:'WATERMELON'},{emoji:'🥕',answer:'CARROT'},{emoji:'🌽',answer:'CORN'},
+    {emoji:'🍄',answer:'MUSHROOM'},{emoji:'🚢',answer:'SHIP'},
+    {emoji:'⚽',answer:'BALL'},{emoji:'📚',answer:'BOOK'},
+    {emoji:'🎂',answer:'CAKE'},{emoji:'🍦',answer:'ICE CREAM'},{emoji:'🌍',answer:'EARTH'},
+    {emoji:'🗻',answer:'MOUNTAIN'},{emoji:'🌲',answer:'TREE'},{emoji:'🦀',answer:'CRAB'},
+    {emoji:'🐙',answer:'OCTOPUS'},{emoji:'🐓',answer:'CHICKEN'},{emoji:'🐥',answer:'CHICK'},
+    {emoji:'🦅',answer:'EAGLE'},{emoji:'🌻',answer:'SUNFLOWER'},
+    {emoji:'❄️',answer:'SNOWFLAKE'},{emoji:'🎵',answer:'MUSIC'},{emoji:'🔔',answer:'BELL'},
+    {emoji:'🌵',answer:'CACTUS'},{emoji:'🐺',answer:'WOLF'},
+    {emoji:'🐢',answer:'TURTLE'},{emoji:'🦎',answer:'LIZARD'},{emoji:'🐍',answer:'SNAKE'},
+    {emoji:'🦈',answer:'SHARK'},{emoji:'🐋',answer:'WHALE'},{emoji:'🦭',answer:'SEAL'},
+    {emoji:'🍑',answer:'PEACH'},
+    {emoji:'🍀',answer:'CLOVER'},{emoji:'🦔',answer:'HEDGEHOG'},
+  ]
+};
+
+// =================== STATE ===================
+let lang = 'ja';
+let questions = [];
+let currentQ = 0;
+let totalCorrect = 0;
+let filledChars = [];
+let answerChars = [];
+let solved = false;
+let isProcessing = false; // prevents rapid double-tap
+let slotShownForMilestone = 0; // which milestone (1,2,3...) slot was last shown
+let synth = window.speechSynthesis;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+// =================== GAME ===================
+function startGame(l) {
+  lang = l;
+  document.getElementById('topScreen').style.display = 'none';
+  document.getElementById('gameScreen').style.display = 'flex';
+  totalCorrect = 0;
+  currentQ = 0;
+  slotShownForMilestone = 0;
+  questions = shuffle(DATA[lang]);
+  updateHeader();
+  loadQuestion();
+}
+
+function quitGame() {
+  if (confirm(lang==='ja' ? 'やめますか？' : 'Quit the game?')) {
+    document.getElementById('gameScreen').style.display = 'none';
+    document.getElementById('slotScreen').style.display = 'none';
+    document.getElementById('topScreen').style.display = 'flex';
+  }
+}
+
+function updateHeader() {
+  document.getElementById('scoreBadge').textContent = '⭐ ' + totalCorrect;
+  document.getElementById('qCounter').textContent = (currentQ+1) + ' / ' + questions.length;
+}
+
+function loadQuestion() {
+  solved = false;
+  isProcessing = false;
+  filledChars = [];
+  updateNavButtons();
+  updateHeader();
+
+  const q = questions[currentQ];
+  document.getElementById('questionLabel').textContent = lang==='ja' ? 'これな〜んだ？' : 'What is it?';
+  document.getElementById('emojiDisplay').textContent = q.emoji;
+  document.getElementById('soundBtnLabel').textContent = lang==='ja' ? 'きいてみよう' : 'Hear it!';
+  document.getElementById('choicesLabel').textContent = lang==='ja' ? 'えらんでね！' : 'Pick one!';
+
+  answerChars = q.answer.split('');
+  const boxes = document.getElementById('answerBoxes');
+  boxes.innerHTML = '';
+  answerChars.forEach((_, i) => {
+    const b = document.createElement('div');
+    b.className = 'answer-box';
+    b.id = 'box'+i;
+    boxes.appendChild(b);
+  });
+
+  renderNextChoices(q);
+}
+
+function renderNextChoices(q) {
+  if (solved) return;
+  const nextIdx = filledChars.length;
+  if (nextIdx >= answerChars.length) return;
+
+  const correctChar = answerChars[nextIdx];
+  const grid = document.getElementById('choicesGrid');
+  grid.innerHTML = '';
+
+  const allChars = new Set();
+  DATA[lang].forEach(item => item.answer.split('').forEach(c => allChars.add(c)));
+  const charPool = [...allChars].filter(c => c !== correctChar);
+  const choices = shuffle([correctChar, ...shuffle(charPool).slice(0, 3)]);
+
+  choices.forEach(ch => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = ch;
+    btn.onclick = () => onChoiceClick(btn, ch, correctChar, q);
+    grid.appendChild(btn);
+  });
+}
+
+function onChoiceClick(btn, ch, correct, q) {
+  if (solved || isProcessing) return;
+  if (lang === 'ja') speakText(ch);
+
+  if (ch === correct) {
+    isProcessing = true;
+    // Disable all current choice buttons immediately to prevent double-tap
+    document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+    btn.classList.add('chosen-correct');
+    const idx = filledChars.length;
+    filledChars.push(ch);
+    const box = document.getElementById('box'+idx);
+    box.textContent = ch;
+    box.classList.add('filled');
+    if (filledChars.length === answerChars.length) {
+      allCorrect(q);
+    } else {
+      setTimeout(() => { isProcessing = false; renderNextChoices(q); }, 350);
+    }
+  } else {
+    btn.classList.add('shake');
+    btn.disabled = true;
+    setTimeout(() => { btn.classList.remove('shake'); btn.style.opacity = '0.4'; }, 400);
+  }
+}
+
+function allCorrect(q) {
+  solved = true;
+  totalCorrect++;
+  updateHeader();
+
+  answerChars.forEach((_, i) => {
+    const box = document.getElementById('box'+i);
+    if (box) box.classList.add('correct-box');
+  });
+
+  showMaru();
+  confetti();
+  if (lang === 'ja') setTimeout(() => speakText(q.answer), 400);
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
+
+  const milestone = Math.floor(totalCorrect / 5);
+  const shouldShowSlot = totalCorrect % 5 === 0 && milestone > slotShownForMilestone;
+
+  setTimeout(() => {
+    if (shouldShowSlot) {
+      slotShownForMilestone = milestone;
+      showSlot();
+    } else {
+      showNextBtn();
+    }
+  }, 1500);
+}
+
+function updateNavButtons() {
+  const nb = document.getElementById('nextBtn');
+  const pb = document.getElementById('prevBtn');
+  const isLast = currentQ >= questions.length - 1;
+  nb.textContent = isLast
+    ? (lang==='ja' ? 'おわり 🎉' : 'Finish 🎉')
+    : (lang==='ja' ? 'つぎへ →' : 'Next →');
+  pb.textContent = lang==='ja' ? '← もどる' : '← Back';
+  pb.disabled = currentQ === 0;
+}
+
+function showNextBtn() {
+  updateNavButtons();
+}
+
+function prevQuestion() {
+  if (currentQ <= 0) return;
+  currentQ--;
+  loadQuestion();
+}
+
+function nextQuestion() {
+  currentQ++;
+  if (currentQ >= questions.length) endGame();
+  else loadQuestion();
+}
+
+function endGame() {
+  document.getElementById('gameScreen').style.display = 'none';
+  document.getElementById('topScreen').style.display = 'flex';
+  setTimeout(() => {
+    alert(lang==='ja'
+      ? `ゲームおわり！\n${totalCorrect}もん せいかい！ 🎉`
+      : `Game Over!\nYou got ${totalCorrect} correct! 🎉`);
+  }, 100);
+}
+
+// =================== SOUND ===================
+function playWord() {
+  const q = questions[currentQ];
+  const btn = document.getElementById('soundBtn');
+  btn.classList.add('playing');
+  setTimeout(() => btn.classList.remove('playing'), 300);
+  speakText(q.answer);
+}
+
+function speakText(text) {
+  if (!synth) return;
+  synth.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = lang==='ja' ? 'ja-JP' : 'en-US';
+  utt.rate = 0.8;
+  utt.pitch = 1.2;
+  synth.speak(utt);
+}
+
+// =================== MARU ===================
+function showMaru() {
+  const m = document.getElementById('bigMaru');
+  m.style.display = 'block';
+  m.style.animation = 'none';
+  void m.offsetWidth;
+  m.style.animation = 'marufade 1.2s ease forwards';
+  setTimeout(() => { m.style.display = 'none'; }, 1300);
+}
+
+// =================== CONFETTI ===================
+function confetti() {
+  const colors = ['#ff6b35','#ffc13b','#4ecdc4','#5cb85c','#e74c3c','#9b59b6'];
+  for (let i = 0; i < 30; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = Math.random()*100+'vw';
+      el.style.background = colors[Math.floor(Math.random()*colors.length)];
+      const sz = 8+Math.random()*10;
+      el.style.width = sz+'px'; el.style.height = sz+'px';
+      el.style.borderRadius = Math.random()>0.5?'50%':'2px';
+      el.style.animationDuration = (1.5+Math.random()*2)+'s';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }, i*50);
+  }
+}
+
+// =================== SLOT ===================
+const reelEmojis = ['🍒','⭐','🍀','💎','🔔','🍋','🍇','🎯','🌟','🏆'];
+let spinDone = false;
+
+function showSlot() {
+  document.getElementById('gameScreen').style.display = 'none';
+  const ss = document.getElementById('slotScreen');
+  ss.style.display = 'flex';
+  spinDone = false;
+  document.getElementById('slotResult').textContent = '';
+  document.getElementById('slotResult').className = 'slot-result';
+  document.getElementById('spinBtn').disabled = false;
+  document.getElementById('spinBtn').textContent = lang==='ja' ? '🎰 まわす！' : '🎰 SPIN!';
+  document.getElementById('slotBackBtn').style.display = 'none';
+  document.getElementById('slotSubtitle').textContent = lang==='ja'
+    ? `${totalCorrect}もんせいかい！チャンスは1かいだけ！`
+    : `You got ${totalCorrect} correct! One spin only!`;
+
+  const emojis = shuffle(reelEmojis);
+  ['reel0','reel1','reel2'].forEach((id,i) => {
+    document.getElementById(id).textContent = emojis[i];
+  });
+  createStars();
+}
+
+function createStars() {
+  const bg = document.getElementById('starsBg');
+  bg.innerHTML = '';
+  for (let i = 0; i < 40; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = 2+Math.random()*4;
+    s.style.cssText = `width:${size}px;height:${size}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-delay:${Math.random()*3}s;animation-duration:${2+Math.random()*3}s`;
+    bg.appendChild(s);
+  }
+}
+
+function spinSlot() {
+  if (spinDone) return;
+  spinDone = true;
+  document.getElementById('spinBtn').disabled = true;
+
+  const isWin = Math.random() < 0.4;
+  const winSymbol = shuffle(reelEmojis)[0];
+  const finalSymbols = isWin
+    ? [winSymbol, winSymbol, winSymbol]
+    : (() => {
+        let s;
+        do { s = shuffle(reelEmojis).slice(0,3); } while(s[0]===s[1]&&s[1]===s[2]);
+        return s;
+      })();
+
+  let doneCount = 0;
+  ['reel0','reel1','reel2'].forEach((id, i) => {
+    let ticks = 0;
+    const maxTicks = 16 + i*9;
+    const iv = setInterval(() => {
+      document.getElementById(id).textContent = reelEmojis[Math.floor(Math.random()*reelEmojis.length)];
+      if (++ticks >= maxTicks) {
+        clearInterval(iv);
+        document.getElementById(id).textContent = finalSymbols[i];
+        if (++doneCount === 3) showSlotResult(isWin);
+      }
+    }, 80);
+  });
+}
+
+function showSlotResult(isWin) {
+  const res = document.getElementById('slotResult');
+  if (isWin) {
+    res.textContent = lang==='ja' ? '🎉 やったー！あたり！！' : '🎉 YOU WIN!!';
+    res.className = 'slot-result win';
+    confetti(); confetti();
+    if (lang==='ja') speakText('やったー！あたり！');
+  } else {
+    res.textContent = lang==='ja' ? '😢 ざんねん…またがんばろう！' : '😢 So close! Keep going!';
+    res.className = 'slot-result lose';
+  }
+  setTimeout(() => {
+    document.getElementById('slotBackBtn').style.display = 'block';
+  }, 800);
+}
+
+function backToGame() {
+  document.getElementById('slotScreen').style.display = 'none';
+  if (currentQ < questions.length - 1) {
+    document.getElementById('gameScreen').style.display = 'flex';
+    showNextBtn();
+  } else {
+    endGame();
+  }
+}
+</script>
+</body>
+</html>
